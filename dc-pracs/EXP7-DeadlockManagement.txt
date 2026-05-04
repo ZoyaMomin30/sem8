@@ -1,0 +1,58 @@
+# deadlock_detection.py
+from collections import defaultdict
+
+class DeadlockDetection:
+    def __init__(self):
+        self.graph = defaultdict(list)
+
+    def add_edge(self, p1, p2):
+        self.graph[p1].append(p2)
+        if p2 not in self.graph:
+            self.graph[p2] = []   # Ensure all processes exist in graph
+
+    def detect_cycle_util(self, node, visited, rec_stack):
+        visited.add(node)
+        rec_stack.add(node)
+
+        for neighbour in self.graph[node]:
+            if neighbour not in visited:
+                if self.detect_cycle_util(neighbour, visited, rec_stack):
+                    return True
+            elif neighbour in rec_stack:
+                return True
+
+        rec_stack.remove(node)
+        return False
+
+    def detect_deadlock(self):
+        visited = set()
+        rec_stack = set()
+
+        for node in list(self.graph.keys()):
+            if node not in visited:
+                if self.detect_cycle_util(node, visited, rec_stack):
+                    return True
+        return False
+
+
+# ===== MAIN PROGRAM =====
+if __name__ == "__main__":
+    system = DeadlockDetection()
+
+    n = int(input("Enter number of processes: "))
+
+    print("\nEnter dependencies (who is waiting for whom)")
+    print("Example: P1 P2 means P1 is waiting for P2")
+
+    m = int(input("Enter number of dependencies: "))
+
+    for i in range(m):
+        p1, p2 = input(f"Dependency {i+1}: ").split()
+        system.add_edge(p1, p2)
+
+    print("\nChecking for Deadlock...\n")
+
+    if system.detect_deadlock():
+        print("Deadlock Detected!")
+    else:
+        print("No Deadlock in the system.")

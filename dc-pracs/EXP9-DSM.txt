@@ -1,0 +1,88 @@
+server.py->
+# server.py
+import socket
+import threading
+
+shared_memory = 0
+lock = threading.Lock()
+
+
+def handle_client(conn, addr):
+    global shared_memory
+
+    print(f"Connected by {addr}")
+
+    data = conn.recv(1024).decode()
+
+    if data == "READ":
+        with lock:
+            response = str(shared_memory)
+        conn.send(response.encode())
+
+    elif data.startswith("WRITE"):
+        value = int(data.split()[1])
+        with lock:
+            shared_memory = value
+        conn.send("UPDATED".encode())
+
+    conn.close()
+
+
+def main():
+    host = '127.0.0.1'
+    port = 8080
+
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+    # Prevent port reuse error
+    server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+    server.bind((host, port))
+    server.listen()
+
+    print("DSM Server Running...")
+
+    while True:
+        conn, addr = server.accept()
+        thread = threading.Thread(
+            target=handle_client,
+            args=(conn, addr)
+        )
+        thread.start()
+
+
+if __name__ == "__main__":
+    main()  
+client.py->
+# client.py
+import socket
+
+
+def main():
+    host = '127.0.0.1'
+    port = 8080
+
+    client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    client.connect((host, port))
+
+    print("1. Read")
+    print("2. Write")
+
+    choice = int(input("Enter choice: "))
+
+    if choice == 1:
+        message = "READ"
+    else:
+        value = input("Enter value: ")
+        message = f"WRITE {value}"
+
+    client.send(message.encode())
+
+    response = client.recv(1024).decode()
+    print("Response from server:", response)
+
+    client.close()
+
+
+if __name__ == "__main__":
+    main()  

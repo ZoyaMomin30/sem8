@@ -1,0 +1,26 @@
+cristian.py
+import time
+import random
+
+# Simulated Time Server
+def time_server():
+    return time.time()
+
+# Client requesting time
+def cristian_algorithm():
+    print("Client requesting time from server...\n")
+
+    t0 = time.time()  # request time
+    server_time = time_server()
+    delay = random.uniform(0.1, 0.5)  # simulate network delay
+    time.sleep(delay)
+    t1 = time.time()  # response received
+
+    rtt = t1 - t0
+    adjusted_time = server_time + (rtt / 2)
+
+    print("Server Time:", time.ctime(server_time))
+    print("Round Trip Time (RTT):", rtt)
+    print("Adjusted Client Time:", time.ctime(adjusted_time))
+
+cristian_algorithm()

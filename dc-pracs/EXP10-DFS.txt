@@ -1,0 +1,120 @@
+server.py->
+# server.py
+
+import socket
+import threading
+
+file_content = ""
+lock = threading.Lock()
+
+
+def handle_client(conn, addr):
+    global file_content
+
+    print(f"Connected by {addr}")
+
+    while True:
+        try:
+            data = conn.recv(1024).decode()
+
+            if not data:
+                break
+
+            command, *args = data.split(" ", 1)
+
+            if command.upper() == "READ":
+                with lock:
+                    response = file_content if file_content else "EMPTY"
+                conn.sendall(response.encode())
+
+            elif command.upper() == "WRITE" and args:
+                with lock:
+                    file_content += args[0]
+                response = "WRITE_OK"
+                conn.sendall(response.encode())
+
+            elif command.upper() == "EXIT":
+                break
+
+            else:
+                conn.sendall("INVALID_COMMAND".encode())
+
+        except ConnectionResetError:
+            break
+
+    conn.close()
+    print(f"Disconnected {addr}")
+
+
+def main():
+    HOST = "localhost"  # change to '0.0.0.0' for LAN access
+    PORT = 65432
+
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+    # prevent port reuse error
+    server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+    server.bind((HOST, PORT))
+    server.listen()
+
+    print(f"Server listening on {HOST}:{PORT}")
+
+    while True:
+        conn, addr = server.accept()
+
+        thread = threading.Thread(
+            target=handle_client,
+            args=(conn, addr)
+        )
+
+        thread.start()
+
+
+if __name__ == "__main__":
+    main()
+client->
+# client.py
+
+import socket
+import time
+
+
+def main():
+    HOST = "localhost"
+    PORT = 65432
+
+    commands = [
+        "READ",
+        "WRITE Hello ",
+        "WRITE World!",
+        "READ",
+        "EXIT"
+    ]
+
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.connect((HOST, PORT))
+
+        print("Connected to DFS server.\n")
+
+        for cmd in commands:
+            print(f"> {cmd}")
+
+            s.sendall(cmd.encode())
+
+            if cmd.upper() == "EXIT":
+                print("Client exiting.\n")
+                break
+
+            data = s.recv(4096).decode()
+
+            if not data:
+                data = "EMPTY"
+
+            print(f"Server response: {data}\n")
+
+            time.sleep(0.5)  # simulate delay
+
+
+if __name__ == "__main__":
+    main()
